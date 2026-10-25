@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Only this site's own files may load; nothing may be sent anywhere. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Redact Before You Paste</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script src="js/theme-boot.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <h1>✂️ Redact <span>before you paste</span></h1>
+      <div class="why">
+        <button class="why-btn" type="button" aria-describedby="whyPop">Why?</button>
+        <div class="why-pop" id="whyPop" role="tooltip">
+          <b>Why redact first?</b>
+          <ul>
+            <li>Depending on the service and your settings, AI chats can be stored, read by reviewers or used to train models.</li>
+            <li>A paste can't be taken back: deleting the chat doesn't guarantee every copy is gone.</li>
+            <li>Customer and employee details are covered by company policy and data-protection law.</li>
+            <li>Placeholders like <code>&lt;CLIENT_1&gt;</code> keep the answer useful, and step 3 puts the real values back.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <span class="pill">🔒 Runs only in your browser · nothing sent · nothing stored</span>
+    <div class="spacer"></div>
+    <button class="ghost" id="themeBtn" type="button" aria-label="Toggle light or dark theme">🌓 Theme</button>
+  </header>
+
+  <div class="grid">
+    <!-- STEP 1: input (js/ui/input-panel.js, js/ui/category-toggles.js) -->
+    <section class="card" aria-labelledby="h-in">
+      <h2 id="h-in"><span class="step">1</span> Paste your text</h2>
+      <label class="sr" for="input">Text to redact</label>
+      <textarea id="input" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+        data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" data-lt-active="false"
+        placeholder="Paste an email, ticket, log, spreadsheet rows… Masking happens as you type."></textarea>
+
+      <details open>
+        <summary>Also mask these (names the tool can't guess)</summary>
+        <div class="fields">
+          <label>Customers / companies → &lt;CLIENT&gt;
+            <input type="text" id="clients" spellcheck="false" autocomplete="off" data-gramm="false" placeholder="e.g. Acme Textiles, Zylo ERP">
+          </label>
+          <label>People → &lt;NAME&gt;
+            <input type="text" id="people" spellcheck="false" autocomplete="off" data-gramm="false" placeholder="e.g. Sanjay Sharma, Simon">
+          </label>
+          <label>Anything else → &lt;TERM&gt; (projects, product codes, internal names)
+            <input type="text" id="other" spellcheck="false" autocomplete="off" data-gramm="false" placeholder="comma separated">
+          </label>
+        </div>
+      </details>
+
+      <details>
+        <summary>What to detect</summary>
+        <div class="chips" id="chips"></div>
+        <div class="fields">
+          <label>Public domains to keep visible (exact host match; customer *.odoo.com databases stay masked)
+            <input type="text" id="keepDomains" spellcheck="false" autocomplete="off">
+          </label>
+        </div>
+      </details>
+    </section>
+
+    <!-- STEP 2: output (js/ui/output-panel.js, js/ui/entries-table.js) -->
+    <section class="card" aria-labelledby="h-out">
+      <h2 id="h-out"><span class="step">2</span> Review, then copy</h2>
+      <div id="output" class="out" tabindex="0" aria-live="polite" data-empty="Your redacted text appears here."></div>
+      <div class="row">
+        <button id="copyBtn" type="button" disabled>📋 Copy redacted text</button>
+        <button id="maskSelBtn" class="secondary" type="button" title="Select a missed word in the output, then click">🖍️ Mask selection</button>
+        <span class="hint">Missed something? Select it above → Mask selection.</span>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="tablewrap" id="tableWrap" hidden>
+        <table>
+          <thead><tr><th>Placeholder</th><th>Original <button class="secondary mini" id="revealAll" type="button">👁 Show</button></th><th></th></tr></thead>
+          <tbody id="entries"></tbody>
+        </table>
+      </div>
+      <div class="warn">⚠️ Automatic detection is a safety net, not a guarantee. Read the output before pasting. Context (job titles, unique facts) can still identify someone.</div>
+    </section>
+  </div>
+
+  <!-- STEP 3: restore (js/ui/restore-panel.js) -->
+  <section class="card mt16" aria-labelledby="h-back">
+    <h2 id="h-back"><span class="step">3</span> Got the AI's answer? Put the real values back (optional)</h2>
+    <div class="grid">
+      <div>
+        <label class="sr" for="aiAnswer">AI answer containing placeholders</label>
+        <textarea id="aiAnswer" class="short" spellcheck="false" autocomplete="off" data-gramm="false" data-enable-grammarly="false" data-lt-active="false" placeholder="Paste the AI's reply that still contains <NAME_1>, <CLIENT_1>…"></textarea>
+      </div>
+      <div>
+        <div id="restored" class="out short" tabindex="0" data-empty="Restored text appears here. It contains real data again, so use it only in Odoo or internal tools."></div>
+        <div class="row"><button id="copyRestored" class="secondary" type="button" disabled>📋 Copy restored text</button></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rules">
+    <div class="rule"><b>1 · Approved AI first</b>Gemini (corporate account) or Odoo's own AI. No redaction needed there for normal work data.</div>
+    <div class="rule"><b>2 · Third-party AI?</b>ChatGPT, Claude, etc.: turn chat history &amp; training OFF.</div>
+    <div class="rule"><b>3 · Redact here</b>Share the shape of the problem, never the identity of the customer.</div>
+    <div class="rule"><b>4 · Can't redact it?</b>Don't paste it. When in doubt → #security-support.</div>
+  </div>
+</div>
+
+<!-- Session bar (js/ui/session.js) -->
+<div class="bar">
+  <div class="inner">
+    <button id="wipeBtn" class="danger" type="button">🧹 Wipe everything &amp; refresh</button>
+    <span class="hint" id="idleHint">Auto-wipes after 10 min of inactivity.</span>
+    <div class="spacer"></div>
+    <span class="hint long">Your text stays in this tab's memory only and is gone on refresh.</span>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<noscript><p class="wrap">This tool needs JavaScript. It runs entirely in your browser and sends nothing.</p></noscript>
+</body>
+</html>
